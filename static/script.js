@@ -1,107 +1,77 @@
-console.log('script.js yüklendi, Chessboard:', typeof Chessboard);
+const socket = io();
+const username = prompt("Adınızı girin:");
+socket.emit('register', { username });
 
-document.addEventListener('DOMContentLoaded', () => {
-  const socket = io();
-  let playerColor = null;
-  let board = null;
-  let currentTurn = 'white';
-  let lastFen = '';
-  let timer = null;
-  let timeLeft = 30;
+let board = null;
+let game = new Chess();
+let myColor = null;
+let isMyTurn = false;
 
-  const username = prompt("Lütfen kullanıcı adınızı girin:");
-  socket.emit('register', { username });
+// Tahta oluştur
+function initBoard(fen) {
+  board = Chessboard('board', {
+    position: fen || 'start',
+    draggable: true,
+    orientation: myColor || 'white',
+    onDragStart: (source, piece) => {
+      if (!isMyTurn || game.game_over()) return false;
+      if (myColor === 'white' && piece.startsWith('b')) return false;
+      if (myColor === 'black' && piece.startsWith('w')) return false;
+    },
+    onDrop: (source, target) => {
+      const move = game.move({ from: source, to: target, promotion: 'q' });
+      if (move === null) return 'snapback';
 
-  socket.on('color', data => {
-    playerColor = data.color;
-    currentTurn = data.turn === 'w' ? 'white' : 'black';
-    lastFen = data.fen;
-
-    const renkGoster = playerColor === 'white' ? 'beyaz' : 'siyah';
-    alert(`Hoş geldin ${data.username}, senin rengin: ${renkGoster}`);
-
-    board = Chessboard('board', {
-      pieceTheme: '/static/chesspieces/{piece}.png',
-      draggable: true,
-      position: data.fen,
-      orientation: playerColor,
-
-      onDrop: (source, target, piece) => {
-        let move = source + target;
-
-        if ((piece === 'wP' && target[1] === '8') || (piece === 'bP' && target[1] === '1')) {
-          move += 'q';
-        }
-
-        if (playerColor !== currentTurn) {
-          alert('Sıra sende değil');
-          return 'snapback';
-        }
-
-        if ((playerColor === 'white' && piece.startsWith('b')) ||
-            (playerColor === 'black' && piece.startsWith('w')) ) {
-          return 'snapback';
-        }
-
-        socket.emit('make_move', { move });
-        return 'snapback';
-      }
-    });
-  });
-
-  socket.on('player_list', data => {
-    const list = document.getElementById('players-list');
-    list.innerHTML = '';
-    data.players.forEach(p => {
-      const renk = p.color === 'white' ? 'beyaz' : 'siyah';
-      const item = document.createElement('li');
-      item.textContent = `${p.name} (${renk})`;
-      list.appendChild(item);
-    });
-  });
-
-  socket.on('move_made', data => {
-    if (board) {
-      setTimeout(() => {
-        board.position(data.fen);
-        currentTurn = data.turn === 'w' ? 'white' : 'black';
-        lastFen = data.fen;
-
-        clearInterval(timer);
-        timeLeft = 30;
-        const countdownEl = document.getElementById('countdown');
-        const gosterRenk = currentTurn === 'white' ? 'beyaz' : 'siyah';
-
-        timer = setInterval(() => {
-          countdownEl.textContent = `Sıra: ${gosterRenk} | Süre: ${timeLeft} saniye`;
-          if (--timeLeft <= 0) {
-            clearInterval(timer);
-            alert(`${gosterRenk} süresi doldu!`);
-          }
-        }, 1000);
-      }, 500);
+      socket.emit('make_move', {
+        move: source + target
+      });
     }
   });
+}
 
-  socket.on('illegal_move', data => {
-    alert(data.error);
-    if (board) board.position(data.fen || lastFen);
-  });
+socket.on('color', (data) => {
+  myColor = data.color;
+  game.load(data.fen);
+  isMyTurn = (data.turn === 'w' && myColor === 'white') || (data.turn === 'b' && myColor === 'black');
 
-  socket.on('game_over', data => {
-    clearInterval(timer);
-    alert('Oyun bitti! Sonuç: ' + data.result);
-  });
+  document.getElementById('status').innerText = `Senin rengin: ${myColor}`;
+  initBoard(data.fen);
+});
 
-  document.getElementById('restartBtn').addEventListener('click', () => {
-    socket.emit('restart_game');
-  });
+socket.on('watch_mode', (data) => {
+  myColor = 'white';  // izleyici beyaz gibi görür
+  game.load(data.fen);
+  document.getElementById('status').innerText = "Sadece izliyorsunuz.";
+  initBoard(data.fen);
+});
 
-  socket.on('game_reset', data => {
-    board.position(data.fen);
-    currentTurn = data.turn === 'w' ? 'white' : 'black';
-    lastFen = data.fen;
-    clearInterval(timer);
-    alert('Oyun sıfırlandı!');
-  });
+socket.on('move_made', (data) => {
+  game.load(data.fen);
+  board.position(data.fen);
+  isMyTurn = (data.turn === 'w' && myColor === 'white') || (data.turn === 'b' && myColor === 'black');
+});
+
+socket.on('illegal_move', (data) => {
+  alert(data.error);
+  game.load(data.fen);
+  board.position(data.fen);
+});
+
+socket.on('game_over', (data) => {
+  alert(data.result || "Oyun sona erdi.");
+});
+
+socket.on('game_reset', (data) => {
+  game.load(data.fen);
+  board.position(data.fen);
+  isMyTurn = (data.turn === 'w' && myColor === 'white') || (data.turn === 'b' && myColor === 'black');
+});
+
+socket.on('player_list', (data) => {
+  const names = data.players.map(p => `${p.name} (${p.color})`).join(" | ");
+  document.getElementById('players').innerText = "Oyuncular: " + names;
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  socket.emit('restart_game');
 });
