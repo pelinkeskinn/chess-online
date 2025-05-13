@@ -1,49 +1,43 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Çevrimiçi Satranç</title>
 
-  <!-- Chessboard.js CSS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    #board {
-      width: 400px;
-      margin: 20px auto;
-    }
-    #status, #players {
-      margin: 10px;
-      font-weight: bold;
-    }
-    #restart-btn {
-      margin-top: 10px;
-      padding: 6px 12px;
-      font-size: 16px;
-    }
-  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <h1>Çevrimiçi Satranç Oyunu</h1>
 
-  <div id="board"></div>
-  <div id="status">Bağlanıyor...</div>
-  <div id="players">Oyuncular: -</div>
-  <button id="restart-btn">Yeniden Başlat</button>
+  <div id="welcomeAlert" class="custom-alert" style="display:none;">
+    <span id="alertText"><strong></strong></span>
+    <span class="close-btn" onclick="document.getElementById('welcomeAlert').style.display='none'">&times;</span>
+  </div>
 
-  <!-- Bağımlı Kütüphaneler -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+  <div class="container">
+    <div id="board-area">
+      <div id="board"></div>
+      <div id="status" class="status-text"></div>
+    </div>
+
+    <div id="player-info">
+      <h2>Oyuncular</h2>
+      <ul id="players-list"></ul>
+      <div id="countdown" class="timer-box"></div>
+      <button id="restartBtn">Yeni Oyuna Başla</button>
+    </div>
+  </div>
+
+  <div id="resultBox" class="result-popup">
+    <h2 id="resultMessage">Oyun Bitti</h2>
+    <button id="result-restart">Yeni Oyun</button>
+  </div>
+
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.13.4/chess.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
-
-  <!-- Oyun Mantığı -->
-  <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
